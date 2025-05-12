@@ -1,0 +1,7 @@
+[
+    "python3 main.py -g null -m gpt-neo-1.3B -d BoolQ",
+    "python3 main.py -g null -m gpt-neo-1.3B -d ARC-Easy",
+    "python3 main.py -g null -m gpt-neo-1.3B -d ARC-Challenge",
+    "python3 main.py -g null -m gpt-neo-1.3B -d OpenBookQA",
+    "python3 main.py -g null -m gpt-neo-1.3B -d PIQA"
+]
