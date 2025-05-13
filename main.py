@@ -28,7 +28,7 @@ def main():
     output_dir = Path("output")
     output_dir.mkdir(exist_ok=True)
 
-    file_name = str(args.model) + "_" + str(args.dataset)
+    file_name = "orin64_" + str(args.model) + "_" + str(args.dataset)
     
     wandb_logger = wandb.init(
         entity="manh-nguyen",
