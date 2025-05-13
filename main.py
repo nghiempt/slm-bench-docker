@@ -17,6 +17,8 @@ from transformers import (
 from zeus.monitor import ZeusMonitor # type: ignore
 from sklearn.metrics import accuracy_score  # type: ignore
 import wandb
+from gpu_monitor import GPUMonitor
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -35,7 +37,10 @@ def main():
         project="slm",
         name=file_name,
     )
-
+    
+    gpu_monitor = GPUMonitor(log_file=f"{output_dir}/{file_name}.gpu_stats.json")
+    gpu_monitor.start()
+    
     try:
         print(f"\n=============== START - {args.model}/{args.dataset} ===============")
 
@@ -308,6 +313,7 @@ def main():
         json.dump(data, f, indent=4)
         
     wandb_logger.finish()
+    gpu_monitor.stop()
 
 
 def generate_report(
