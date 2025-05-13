@@ -3,7 +3,7 @@ numpy
 argparse
 evaluate
 datasets
-torch
+#torch
 transformers
 scikit-learn
 zeus-ml
