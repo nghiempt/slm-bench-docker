@@ -1,3 +1,4 @@
+huggingface_hub[hf_xet]
 numpy
 argparse
 evaluate
