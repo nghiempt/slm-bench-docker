@@ -306,6 +306,14 @@ def main():
     output_file = output_dir / f"{file_name}.json"
     with open(output_file, "w") as f:
         json.dump(data, f, indent=4)
+        
+    # Create an artifact
+    artifact = wandb_logger.Artifact("run_log", type="log")
+    artifact.add_file(output_file)
+
+    # Log artifact to the run
+    wandb_logger.log_artifact(artifact)
+    
     wandb_logger.finish()
 
 
@@ -320,8 +328,15 @@ def generate_report(
 
     def calculate_accuracy():
         return round(0.700 + (secrets.randbelow(201) / 1000), 3)
-
-    _log = {
+        
+    wandb_logger.log({
+        "fine_tuning_time": fine_tuning_time_minutes,
+        "energy": calculate_energy(),
+        "co2": calculate_co2(),
+        "evaluation": calculate_accuracy(),
+    })
+    
+    return {
         "model": model,
         "dataset": dataset,
         "fine_tuning_time": f"{fine_tuning_time_minutes:.2f} minutes",
@@ -330,8 +345,6 @@ def generate_report(
         "co2": calculate_co2(),
         "evaluation": calculate_accuracy(),
     }
-    wandb_logger.log(_log)
-    return _log
 
 
 if __name__ == "__main__":
