@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM nvcr.io/nvidia/l4t-pytorch:r35.2.1-pth2.0-py3
 
 WORKDIR /app
 
