@@ -85,6 +85,7 @@ class GPUMonitor:
                         power_usages.append(int(match_vddin.group(1)))
 
         def avg(lst):
+            lst=lst[10:]
             return sum(lst) / len(lst) if lst else 0
 
         return {
