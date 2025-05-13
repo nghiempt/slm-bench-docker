@@ -91,5 +91,5 @@ class GPUMonitor:
             'avg_gpu_usage_percent': round(avg(gpu_usages), 2),
             'avg_gpu_temperature_C': round(avg(gpu_temps), 2),
             'avg_cpu_temperature_C': round(avg(cpu_temps), 2),
-            'avg_total_power_mW': round(avg(power_usages), 2)
+            'avg_total_power_W': round(avg(power_usages)/1000, 2)
         }
