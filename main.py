@@ -287,7 +287,7 @@ def main():
         print(f"Model saved at: {OUTPUT_DIR}")
 
         print(f"\n=============== END - {args.model}/{args.dataset} ===============")
-
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         data = generate_report(
             fine_tuning_time_minutes=training_time / 60,
             model=args.model,
@@ -307,13 +307,6 @@ def main():
     with open(output_file, "w") as f:
         json.dump(data, f, indent=4)
         
-    # Create an artifact
-    artifact = wandb_logger.Artifact("run_log", type="log")
-    artifact.add_file(output_file)
-
-    # Log artifact to the run
-    wandb_logger.log_artifact(artifact)
-    
     wandb_logger.finish()
 
 
@@ -330,7 +323,7 @@ def generate_report(
         return round(0.700 + (secrets.randbelow(201) / 1000), 3)
         
     wandb_logger.log({
-        "fine_tuning_time(minutes)": fine_tuning_time_minutes,
+        "fine_tuning_time_in_minutes": fine_tuning_time_minutes,
         "energy": calculate_energy(),
         "co2": calculate_co2(),
         "evaluation": calculate_accuracy(),
