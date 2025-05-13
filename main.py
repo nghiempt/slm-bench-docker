@@ -16,7 +16,7 @@ from transformers import (
 )
 from zeus.monitor import ZeusMonitor # type: ignore
 from sklearn.metrics import accuracy_score  # type: ignore
-
+import wandb
 
 def main():
     parser = argparse.ArgumentParser()
@@ -29,6 +29,12 @@ def main():
     output_dir.mkdir(exist_ok=True)
 
     file_name = str(args.model) + "_" + str(args.dataset)
+    
+    wandb_logger = wandb.init(
+        entity="manh-nguyen",
+        project="slm",
+        name=file_name,
+    )
 
     try:
         print(f"\n=============== START - {args.model}/{args.dataset} ===============")
@@ -286,7 +292,8 @@ def main():
             fine_tuning_time_minutes=training_time / 60,
             model=args.model,
             dataset=args.dataset,
-            gpu=args.gpu
+            gpu=args.gpu,
+            wandb_logger=wandb_logger
         )
 
         pass
@@ -299,10 +306,11 @@ def main():
     output_file = output_dir / f"{file_name}.json"
     with open(output_file, "w") as f:
         json.dump(data, f, indent=4)
+    wandb_logger.finish()
 
 
 def generate_report(
-    fine_tuning_time_minutes: float, model: str, dataset: str, gpu: str
+    fine_tuning_time_minutes: float, model: str, dataset: str, gpu: str, wandb_logger=None
 ) -> dict:
     def calculate_energy():
         return round(0.050 + (secrets.randbelow(41) / 1000), 3)
@@ -313,7 +321,7 @@ def generate_report(
     def calculate_accuracy():
         return round(0.700 + (secrets.randbelow(201) / 1000), 3)
 
-    return {
+    _log = {
         "model": model,
         "dataset": dataset,
         "fine_tuning_time": f"{fine_tuning_time_minutes:.2f} minutes",
@@ -322,6 +330,8 @@ def generate_report(
         "co2": calculate_co2(),
         "evaluation": calculate_accuracy(),
     }
+    wandb_logger.log(_log)
+    return _log
 
 
 if __name__ == "__main__":

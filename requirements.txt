@@ -2,9 +2,10 @@ numpy
 argparse
 evaluate
 datasets
-torch
+#torch
 transformers
 scikit-learn
 zeus-ml
 nvidia-ml-py
 accelerate>=0.26.0
+wandb
