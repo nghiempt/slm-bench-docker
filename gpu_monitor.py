@@ -1,84 +1,95 @@
-import platform
 import subprocess
-import threading
-import time
+import os
+import signal
 import re
-import json
-
 
 class GPUMonitor:
-    def __init__(self, log_file="gpu_stats.json", sample_interval=1, update_interval=10):
-        self.log_file = log_file
-        self.sample_interval = sample_interval
-        self.update_interval = update_interval
-        self.samples = []
-        self._stop_event = threading.Event()
-
-        self._monitor_fn = self._monitor_jetson
+    def __init__(self, logfile='test.json'):
+        self.logfile = logfile
+        self.process = None
 
     def start(self):
-        if self._monitor_fn:
-            self.thread = threading.Thread(target=self._monitor_fn, daemon=True)
-            self.thread.start()
+        if self.process is not None:
+            raise RuntimeError("tegrastats is already running.")
+
+        self.process = subprocess.Popen(
+            ['tegrastats', '--logfile', self.logfile],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            preexec_fn=os.setpgrp  # Detach process group
+        )
+        print(f"Started tegrastats with PID {self.process.pid}")
 
     def stop(self):
-        self._stop_event.set()
-        if hasattr(self, "thread"):
-            self.thread.join()
+        if self.process is None:
+            raise RuntimeError("tegrastats is not running.")
 
-    def _monitor_jetson(self):
-        def get_tegrastats_sample():
-            try:
-                result = subprocess.check_output("tegrastats --interval 1000 --count 1", shell=True).decode()
-                return result.strip()
-            except subprocess.CalledProcessError:
-                return ""
+        try:
+            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+            self.process.wait()
+            print("tegrastats stopped.")
+        except ProcessLookupError:
+            print("tegrastats process already terminated.")
+        finally:
+            self.process = None
 
-        def parse(output):
-            mem_used = mem_total = gpu_util = total_power_mw = None
+        stats = self._parse_tegrastats_log(self.logfile)
+        print("Averaged Stats:")
+        for key, value in stats.items():
+            print(f"{key}: {value}")
+        return stats
 
-            ram_match = re.search(r'RAM (\d+)/(\d+)MB', output)
-            if ram_match:
-                mem_used = int(ram_match.group(1))
-                mem_total = int(ram_match.group(2))
+    def _parse_tegrastats_log(self, filepath):
+        gpu_usages = []
+        gpu_temps = []
+        cpu_temps = []
+        ram_usages = []
+        power_usages = []
 
-            gpu_match = re.search(r'GR3D_FREQ (\d+)%', output)
-            if gpu_match:
-                gpu_util = int(gpu_match.group(1))
+        is_agx = False
 
-            power_matches = re.findall(r'(\d+)mW/\d+mW', output)
-            if power_matches:
-                total_power_mw = sum(int(p) for p in power_matches)
+        with open(filepath, 'r') as f:
+            for line in f:
+                if re.search(r'VIN_|VDD_GPU_SOC|VDD_CPU_CV', line):
+                    is_agx = True
 
-            return {
-                'gpu_util_percent': gpu_util or 0,
-                'gpu_mem_used_MB': mem_used,
-                'gpu_mem_total_MB': mem_total,
-                'total_power_mw': total_power_mw or 0
-            }
+                # GPU usage
+                match_gpu = re.search(r'GR3D_FREQ\s+(\d+)%', line)
+                if match_gpu:
+                    gpu_usages.append(int(match_gpu.group(1)))
 
-        last_update = time.time()
+                # GPU temp
+                match_gpu_temp = re.search(r'GPU@([\d\.]+)C', line)
+                if match_gpu_temp:
+                    gpu_temps.append(float(match_gpu_temp.group(1)))
 
-        while not self._stop_event.is_set():
-            raw = get_tegrastats_sample()
-            parsed = parse(raw)
-            self.samples.append(parsed)
+                # CPU temp
+                match_cpu_temp = re.search(r'CPU@([\d\.]+)C', line)
+                if match_cpu_temp:
+                    cpu_temps.append(float(match_cpu_temp.group(1)))
 
-            if time.time() - last_update >= self.update_interval:
-                avg = self._calculate_averages()
-                with open(self.log_file, "w") as f:
-                    json.dump(avg, f, indent=2)
-                last_update = time.time()
+                # RAM usage
+                match_ram = re.search(r'RAM\s+(\d+)/\d+MB', line)
+                if match_ram:
+                    ram_usages.append(int(match_ram.group(1)))
 
-            time.sleep(self.sample_interval)
+                if is_agx:
+                    matches = re.findall(r'(VDD|VIN)[\w_]*\s+(\d+)mW', line)
+                    total_power = sum(int(val) for _, val in matches)
+                    if total_power > 0:
+                        power_usages.append(total_power)
+                else:
+                    match_vddin = re.search(r'VDD_IN\s+(\d+)mW', line)
+                    if match_vddin:
+                        power_usages.append(int(match_vddin.group(1)))
 
-    def _calculate_averages(self):
-        if not self.samples:
-            return {}
+        def avg(lst):
+            return sum(lst) / len(lst) if lst else 0
 
-        keys = self.samples[0].keys()
-        avg = {}
-        for key in keys:
-            values = [s[key] for s in self.samples if s[key] is not None]
-            avg[key] = sum(values) / len(values) if values else None
-        return avg
+        return {
+            'avg_gpu_usage_percent': round(avg(gpu_usages), 2),
+            'avg_gpu_temperature_C': round(avg(gpu_temps), 2),
+            'avg_cpu_temperature_C': round(avg(cpu_temps), 2),
+            'avg_total_power_mW': round(avg(power_usages), 2)
+        }

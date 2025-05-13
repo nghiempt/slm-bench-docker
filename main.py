@@ -38,7 +38,7 @@ def main():
         name=file_name,
     )
     
-    gpu_monitor = GPUMonitor(log_file=f"{output_dir}/{file_name}.gpu_stats.json")
+    gpu_monitor = GPUMonitor(f"{output_dir}/{file_name}.gpu_stats.json")
     gpu_monitor.start()
     data={}
     try:
@@ -298,7 +298,6 @@ def main():
             model=args.model,
             dataset=args.dataset,
             gpu=True if device=="cuda" else False,
-            wandb_logger=wandb_logger
         )
 
         pass
@@ -311,13 +310,20 @@ def main():
     output_file = output_dir / f"{file_name}.json"
     with open(output_file, "w") as f:
         json.dump(data, f, indent=4)
-        
+    
+    stats=gpu_monitor.stop()
+    stats.update({
+        "fine_tuning_time_in_minutes": data["fine_tuning_time"][:-8],
+        "energy": data["energy"],
+        "co2": data["co2"],
+        "evaluation": data["evaluation"],
+    })
+    wandb_logger.log(stats)
     wandb_logger.finish()
-    gpu_monitor.stop()
 
 
 def generate_report(
-    fine_tuning_time_minutes: float, model: str, dataset: str, gpu: str, wandb_logger=None
+    fine_tuning_time_minutes: float, model: str, dataset: str, gpu: str
 ) -> dict:
     def calculate_energy():
         return round(0.050 + (secrets.randbelow(41) / 1000), 3)
@@ -327,13 +333,6 @@ def generate_report(
 
     def calculate_accuracy():
         return round(0.700 + (secrets.randbelow(201) / 1000), 3)
-        
-    wandb_logger.log({
-        "fine_tuning_time_in_minutes": fine_tuning_time_minutes,
-        "energy": calculate_energy(),
-        "co2": calculate_co2(),
-        "evaluation": calculate_accuracy(),
-    })
     
     return {
         "model": model,
