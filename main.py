@@ -40,7 +40,7 @@ def main():
     
     gpu_monitor = GPUMonitor(log_file=f"{output_dir}/{file_name}.gpu_stats.json")
     gpu_monitor.start()
-    
+    data={}
     try:
         print(f"\n=============== START - {args.model}/{args.dataset} ===============")
 
