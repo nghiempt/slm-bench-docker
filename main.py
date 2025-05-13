@@ -292,7 +292,7 @@ def main():
             fine_tuning_time_minutes=training_time / 60,
             model=args.model,
             dataset=args.dataset,
-            gpu=args.gpu,
+            gpu=True if device=="cuda" else False,
             wandb_logger=wandb_logger
         )
 
@@ -330,7 +330,7 @@ def generate_report(
         return round(0.700 + (secrets.randbelow(201) / 1000), 3)
         
     wandb_logger.log({
-        "fine_tuning_time": fine_tuning_time_minutes,
+        "fine_tuning_time(minutes)": fine_tuning_time_minutes,
         "energy": calculate_energy(),
         "co2": calculate_co2(),
         "evaluation": calculate_accuracy(),
