@@ -39,7 +39,7 @@ def main():
     )
     
     gpu_monitor = GPUMonitor(f"{output_dir}/{file_name}.gpu_stats.json")
-    gpu_monitor.start()
+    
     data={}
     try:
         print(f"\n=============== START - {args.model}/{args.dataset} ===============")
@@ -262,6 +262,7 @@ def main():
 
         print("Starting fine-tuning...")
         start_time = time.time()
+        gpu_monitor.start()
 
         from tqdm.auto import tqdm  # type: ignore
 
